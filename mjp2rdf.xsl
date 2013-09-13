@@ -1,18 +1,29 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- 
-    
-    A set of XSL templates for transforming the MODS records produced by
-    the Modernist Journals Project into RDF suitable for ingestion into 
+    A set of XSL templates for transforming the METS records produced by
+    the Modernist Journals Project (the MJP objects) into RDF suitable for ingestion into 
     ModNets.
     
     REFERENCES: http://wiki.collex.org/index.php/Submitting_RDF
-
 -->
-<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
-    xmlns:mods="http://www.loc.gov/mods/v3" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-    xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:mjp="http://modjourn.org"
-    xmlns:collex="http://www.collex.org/schema#" xmlns:role="http://www.loc.gov/loc.terms/relators/"
-    xmlns:xs="http://www.w3.org/2001/XMLSchema" exclude-result-prefixes="xs mods" version="2.0">
+
+<!-- This stylesheet uses the &quot;pull&quot; method of XSL processing,
+    because the purpose is to create a conformant Collex document, not to
+    account for all elements in the MJP MODS record. -->
+
+
+<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" 
+		xmlns:mjp="http://modjourn.org"
+		xmlns:mets="http://www.loc.gov/METS/" 
+		xmlns:mods="http://www.loc.gov/mods/v3"
+		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+		xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+		xmlns:dc="http://purl.org/dc/elements/1.1/"
+		xmlns:dcterms="http://purl.org/dc/terms/"
+		xmlns:collex="http://www.collex.org/schema#"
+		xmlns:role="http://www.loc.gov/loc.terms/relators/" 
+		xmlns:xs="http://www.w3.org/2001/XMLSchema"
+		exclude-result-prefixes="xs mods" version="2.0">
 
     <xsl:output indent="yes"/>
 
@@ -21,18 +32,25 @@
         GLOBAL DECLARATIONS
     -->
 
-    <!-- Collex requires &quot;a shorthand reference to the contributing project or journal&quot;.  -->
+    <!-- Collex REQUIRES "a shorthand reference to the contributing project or journal."  -->
     <xsl:variable name="project-id" as="xs:string">MJP</xsl:variable>
 
-    <!-- Collex requires one or more federation ids. An authorized string for ModNets would be nice
+    <!-- Collex REQUIRES one or more federation ids. An authorized string for ModNets would be nice
     but this will do for now. -->
     <xsl:variable name="federation-id" as="xs:string">ModNets</xsl:variable>
 
+    <!-- Collex REQUIRES one or more disciplines.  These are not terribly well defined; for
+    now, Literature seems to be the only one universally applicable to MJP materials. -->
+    <xsl:variable name="disciplines">
+        <disciplines>
+            <discipline>Literature</discipline>
+        </disciplines>
+    </xsl:variable>
 
 
 
-    <!-- 
-    TEMPLATES
+    <!--   
+	 TEMPLATES
     -->
 
     <xsl:template match="/">
@@ -42,14 +60,56 @@
         </rdf:RDF>
     </xsl:template>
 
-    <!-- This stylesheet uses the &quot;pull&quot; method of XSL processing,
-    because the purpose is to create a conformant Collex document, not to
-    account for all elements in the MJP MODS record. -->
+<!-- 
+        The MJP library contains resources of the following types:
+        
+text.periodicals.issue
+text.biographies
+image
+text.essays
+collection
+text.indexes
+text.books
+text.periodicals
+text
+
+Each requies a different kind of RDF.
+    -->
+
+
+<!-- 
+    Periodical Issues (text.periodicals.issue)
+-->
+
+    <xsl:template match="mets:mets[@TYPE='text.periodicals.issue']">
+        <!-- An element with an rdf:about element is REQUIRED.  
+            The spec says it should be an arbitrary element in the
+            project's namespace; for now we're emitting the usual 
+            rdf:Description element.  -->
+        <xsl:variable name="objid" select="@OBJID" />
+        <rdf:Description rdf:about="http://modjourn.org/{@OBJID}"> 
+          <xsl:apply-templates select="//mods:mods">
+            <xsl:with-param name="objid" select="@OBJID" />
+          </xsl:apply-templates>
+        </rdf:Description>
+        
+        <!-- Generate an RDF object for each issue constituent.	-->
+
+        <xsl:for-each select="//mods:mods/mods:relatedItem[@type='constituent']">
+	  <!-- The MJP does not assign IDs to relatedItems (it should)
+	       so we must construct a unique id for the relatedItem
+	       from its position in the sequence of relatedItems. -->
+          <rdf:Description rdf:about="http://modjourn.org/{$objid}#{position()}">
+              <dcterms:isPartOf rdf:resource="http://modjourn.org/{$objid}"/>
+            <xsl:apply-templates select=".">
+              <xsl:with-param name="objid" select="$objid" />
+            </xsl:apply-templates>
+          </rdf:Description>
+        </xsl:for-each>
+    </xsl:template>
 
     <xsl:template match="mods:mods">
-        <!-- An element with an rdf:about element is REQUIRED.  
-            It does not have to be an rdf:Description element.  -->
-        <rdf:Description rdf:about="http://modjourn.org/{@ID}"/>
+        <xsl:param name="objid"/>
 
         <!-- One or more <collex:federation> elements are REQUIRED. -->
         <collex:federation>
@@ -62,22 +122,70 @@
         </collex:archive>
 
         <!-- A SINGLE <dc:title> element is REQUIRED. -->
+	<!--Some issues may have more than one title element; use the
+	     first one. -->
         <dc:title>
-            <xsl:apply-templates select="mods:titleInfo[1]"/>
+          <xsl:apply-templates select="mods:titleInfo[1]"/> 
         </dc:title>
 
-        <!-- One or more <dc:type> elements are REQUIRED. -->
+        <!-- ONE OR MORE <dc:type> elements are REQUIRED. We determine
+             the dc:type from the mods:genre; NB that the mods:genre
+             element is also used to determine the collex:genre. -->
         <dc:type>
             <xsl:apply-templates select="mods:genre"/>
         </dc:type>
 
-        <!-- One or more <role:*> elements are REQUIRED. The MJP does not
+        <!-- ONE OR MORE <role:*> elements are REQUIRED. The MJP does not
         presently record roles (like editor) for top-level titles, volumes, or issues. -->
         <xsl:apply-templates select="mods:name"/>
-
-
+        
+        <!-- One or more <collex:discipline> elements are REQUIRED. -->
+        <xsl:for-each select="$disciplines/disciplines/discipline">
+            <collex:discipline>
+	      <xsl:value-of select="current()" />
+	    </collex:discipline>
+        </xsl:for-each>
+        
+        <!-- ONE OR MORE <collex:genre> elements are REQUIRED. -->
+        <xsl:apply-templates select="mods:genre" mode="collex-genre" />
+        
+        <!-- ONE OR MORE <dc:date> elements are REQUIRED. -->
+        <dc:date>
+            <xsl:value-of select="mods:originInfo/mods:dateIssued[@keyDate='yes']"/>
+        </dc:date>
+        
+        <!-- ONE <rdfs:seeAlso> element with the URL of the resource is REQUIRED. 
+	     We write a function, mjp:object-URL(), that returns this URL. -->
+        <rdfs:seeAlso>
+            <xsl:attribute name="rdf:resource" select="mjp:object-URL($objid)"/>
+        </rdfs:seeAlso>
+        
+        <!-- END OF REQUIRED ELEMENTS -->
+        
+        <!-- Generate a <collex:source_xml> element that points to the TEI file
+        associated with this object.  Unfortunately, that file is not represented in the 
+        fileSec of the METS.  Fortunately, there is a naming convention: the
+        TEI derivative is named MJPID.tei.xml, where MJPID is the ID of the MODS record,
+	so we write a function, mjp:tei-URL() that returns a URL. -->
+        <collex:source_xml>
+            <xsl:value-of select="mjp:tei-URL(@ID)" />
+        </collex:source_xml>
+        
+        <!-- MODS constituents are represented as explicit resources (objects).
+        In the parent (issue) object, their relationship with the parent object
+        is represented with <dcterms:hasPart> elements. -->
+        <xsl:for-each select="mods:relatedItem[@type='constituent']">
+            <dcterms:hasPart rdf:resource="http://modjourn.org/{$objid}#{position()}"/>
+        </xsl:for-each>
     </xsl:template>
 
+
+
+
+
+
+    <!-- This template converts a mods:titleInfo element into a formatted string.
+    The complete format is the following: NonSort Title: Subtitle (Part) -->
     <xsl:template match="mods:titleInfo">
         <xsl:variable name="nonSort">
             <xsl:choose>
@@ -106,18 +214,57 @@
         <xsl:value-of select="concat($nonSort,$title,$subTitle,$part)"/>
     </xsl:template>
 
+
     <xsl:template match="mods:genre[@authority='aat']">
+        <!-- <dc:type> is poorly implemented in Collex.
+            For purposes of ingestion into Collex, we identify
+            magazine issues as Collections and the contents of
+	    issues as Periodical. -->
         <xsl:choose>
             <xsl:when test="./text() = 'periodicals'">
-                <xsl:text>Periodical</xsl:text>
+                <xsl:text>Collection</xsl:text>
             </xsl:when>
-            <xsl:otherwise>ERROR</xsl:otherwise>
+            <xsl:otherwise>Periodical</xsl:otherwise>
         </xsl:choose>
+    </xsl:template>
+    
+    <xsl:template match="mods:genre" mode="collex-genre">
+        <collex:genre>
+            <xsl:choose>
+                <xsl:when test="./text() = 'periodicals'">
+                    <xsl:text>Collection</xsl:text>
+                </xsl:when>
+                <xsl:when test="./text() = 'articles'">
+                    <xsl:text>Nonfiction</xsl:text>
+                </xsl:when>
+                <xsl:when test="./text() = 'advertisements'">
+                    <xsl:text>Ephemera</xsl:text>
+                </xsl:when>
+                <xsl:when test="./text() = 'letters'">
+                    <xsl:text>Correspondence</xsl:text>
+                </xsl:when>
+                <xsl:when test="./text() = 'poetry'">
+                    <xsl:text>Poetry</xsl:text>
+                </xsl:when>
+                <xsl:when test="./text() = 'fiction'">
+                    <xsl:text>Fiction</xsl:text>
+                </xsl:when>
+                <xsl:when test="./text() = 'drama'">
+                    <xsl:text>Drama</xsl:text>
+                </xsl:when>
+                <xsl:when test="./text() = 'images'">
+                    <xsl:text>Visual Art</xsl:text>
+                </xsl:when>
+                <xsl:otherwise><xsl:message>ERROR</xsl:message></xsl:otherwise>
+            </xsl:choose>
+        </collex:genre>
     </xsl:template>
 
     <xsl:template match="mods:name">
         <!-- ARC has a fixed set of elements to denote roles. -->
-        <xsl:variable name="name" select="mods:namePart/text()" as="xs:string"/>
+        <!-- The MJP data occasionally uses namePart[@type='date'] and namePart[@type='termsOfAddress'] but mostly uses
+        untyped nameParts (no 'given' or 'family').  We pluck out the untyped namePart for the RDF. -->
+        <xsl:variable name="name" select="mods:namePart[empty(@type)]/text()" as="xs:string"/>
         <xsl:variable name="roleTerm" select="mods:role/mods:roleTerm/text()"/>
         <xsl:choose>
             <xsl:when test="$roleTerm = 'editor'">
@@ -130,7 +277,74 @@
                     <xsl:value-of select="$name"/>
                 </role:CRE>
             </xsl:when>
+            <xsl:when test="$roleTerm = 'translator'">
+                <role:TRL>
+                    <xsl:value-of select="$name"/>
+                </role:TRL>
+            </xsl:when>
         </xsl:choose>
     </xsl:template>
+    
+    <xsl:function name="mjp:object-URL">
+        <xsl:param name="objid" as="xs:string"/>
+       
+        <xsl:value-of select="concat('http://modjourn.org/render.php?id=', $objid,'&amp;', 'view=mjp_object')"></xsl:value-of>
+    </xsl:function>
+    
+    <xsl:function name="mjp:tei-URL">
+        <xsl:param name="modsid" as="xs:string"/>
+        <xsl:value-of select="concat('http://dl.lib.brown.edu/mjp/teifiles/', $modsid, '.tei.xml')"></xsl:value-of>
+    </xsl:function>
+    
+    
+    
+    <!-- Template for processing issue constituents.  There's a good
+         deal of overlap with the mods:mods template, so some code
+         refactoring needs to be done. -->
+    <xsl:template match="mods:relatedItem[@type='constituent']">
+      <xsl:param name="objid"/>
+      
+      <!-- One or more <collex:federation> elements are REQUIRED. -->
+      <collex:federation>
+        <xsl:value-of select="$federation-id"/>
+      </collex:federation>
+      
+      <!-- A SINGLE <collex:archive> element is REQUIRED. -->
+      <collex:archive>
+          <xsl:value-of select="$project-id"/>
+      </collex:archive>
+      
+      <!-- A SINGLE <dc:title> element is REQUIRED. -->
+      <dc:title>
+          <xsl:apply-templates select="mods:titleInfo[1]"/>
+      </dc:title>
+      
+      <!-- One or more <dc:type> elements are REQUIRED. -->
+      <dc:type>
+          <xsl:apply-templates select="mods:genre"/>
+      </dc:type>
+      
+      <!-- One or more <role:*> elements are REQUIRED. The MJP does not
+        presently record roles (like editor) for top-level titles, volumes, or issues. -->
+      <xsl:apply-templates select="mods:name"/>
+      
+      <!-- One or more <collex:discipline> elements are REQUIRED. -->
+      <xsl:for-each select="$disciplines/disciplines/discipline">
+          <collex:discipline><xsl:value-of select="current()" /></collex:discipline>
+      </xsl:for-each>
+      
+      <!-- One or more <collex:genre> elements are REQUIRED. -->
+      <xsl:apply-templates select="mods:genre" mode="collex-genre" />
+      
+      <!-- One or more <dc:date> elements are REQUIRED. -->
+      <dc:date>
+          <xsl:value-of select="ancestor::mods:mods/mods:originInfo/mods:dateIssued[@keyDate='yes']"/>
+      </dc:date>
+      
+      <!-- ONE <rdfs:seeAlso> element with the URL of the resource is REQUIRED. -->
+      <rdfs:seeAlso>
+          <xsl:attribute name="rdf:resource" select="mjp:object-URL($objid)"/>
+      </rdfs:seeAlso>
+  </xsl:template>
 
 </xsl:stylesheet>
