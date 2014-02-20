@@ -194,19 +194,19 @@ Each requies a different kind of RDF.
             </xsl:choose>
         </xsl:variable>
         <xsl:variable name="title">
-            <xsl:value-of select="mods:title/text()"/>
+            <xsl:value-of select="mods:title[1]/text()"/>
         </xsl:variable>
         <xsl:variable name="subTitle">
             <xsl:choose>
                 <xsl:when test="mods:subTitle">
-                    <xsl:value-of select="concat(': ', mods:subTitle/text())"/>
+                    <xsl:value-of select="concat(': ', mods:subTitle[1]/text())"/>
                 </xsl:when>
             </xsl:choose>
         </xsl:variable>
         <xsl:variable name="part">
             <xsl:choose>
                 <xsl:when test="mods:partNumber">
-                    <xsl:value-of select="concat(' (',mods:partNumber/text(),')')"/>
+                    <xsl:value-of select="concat(' (',mods:partNumber[1]/text(),')')"/>
                 </xsl:when>
             </xsl:choose>
         </xsl:variable>
@@ -255,8 +255,9 @@ Each requies a different kind of RDF.
                     <xsl:text>Visual Art</xsl:text>
                 </xsl:when>
                 <xsl:otherwise>
-                    <xsl:message>ERROR</xsl:message>
+                    <xsl:text>Unspecified</xsl:text>
                 </xsl:otherwise>
+                
             </xsl:choose>
         </collex:genre>
     </xsl:template>
@@ -265,25 +266,35 @@ Each requies a different kind of RDF.
         <!-- ARC has a fixed set of elements to denote roles. -->
         <!-- The MJP data occasionally uses namePart[@type='date'] and namePart[@type='termsOfAddress'] but mostly uses
         untyped nameParts (no 'given' or 'family').  We pluck out the untyped namePart for the RDF. -->
-        <xsl:variable name="name" select="mods:namePart[empty(@type)]/text()" as="xs:string"/>
-        <xsl:variable name="roleTerm" select="mods:role/mods:roleTerm/text()"/>
-        <xsl:choose>
-            <xsl:when test="$roleTerm = 'editor'">
-                <role:EDT>
-                    <xsl:value-of select="$name"/>
-                </role:EDT>
-            </xsl:when>
-            <xsl:when test="$roleTerm = 'creator'">
-                <role:CRE>
-                    <xsl:value-of select="$name"/>
-                </role:CRE>
-            </xsl:when>
-            <xsl:when test="$roleTerm = 'translator'">
-                <role:TRL>
-                    <xsl:value-of select="$name"/>
-                </role:TRL>
-            </xsl:when>
-        </xsl:choose>
+        
+        <!-- MJP data is somewhat dirty. There are <mods:name> elements with <mods:role> subelements but no <mods:namePart> element.
+        We have to check for this.-->
+        <xsl:if test="mods:namePart[empty(@type)]">
+            <xsl:variable name="name">
+                <xsl:apply-templates select="mods:namePart[empty(@type)]" />
+            </xsl:variable>
+        
+        <xsl:if test="$name">
+            <xsl:variable name="roleTerm" select="mods:role/mods:roleTerm/text()"/>
+            <xsl:choose>
+                <xsl:when test="$roleTerm = 'editor'">
+                    <role:EDT>
+                        <xsl:value-of select="$name"/>
+                    </role:EDT>
+                </xsl:when>
+                <xsl:when test="$roleTerm = 'creator'">
+                    <role:CRE>
+                        <xsl:value-of select="$name"/>
+                    </role:CRE>
+                </xsl:when>
+                <xsl:when test="$roleTerm = 'translator'">
+                    <role:TRL>
+                        <xsl:value-of select="$name"/>
+                    </role:TRL>
+                </xsl:when>
+            </xsl:choose>
+        </xsl:if>
+        </xsl:if>
     </xsl:template>
 
     <xsl:function name="mjp:object-URL">
@@ -333,7 +344,7 @@ Each requies a different kind of RDF.
         ARC advises to encode <role:AUT>Unknown</role:AUT> to indicate that the
         -->
         <xsl:choose>
-            <xsl:when test="mods:name">
+            <xsl:when test="mods:name and not(empty(mods:name/text()))">
                 <xsl:apply-templates select="mods:name"/>
             </xsl:when>
             <xsl:otherwise><role:AUT>Unknown</role:AUT></xsl:otherwise>
