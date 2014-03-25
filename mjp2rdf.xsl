@@ -43,7 +43,6 @@
     </xsl:variable>
 
 
-
     <!--   
 	 TEMPLATES
     -->
@@ -270,11 +269,15 @@ Each requies a different kind of RDF.
 
     <xsl:template match="mods:name">
         <!-- ARC has a fixed set of elements to denote roles. -->
-        <!-- The MJP data occasionally uses namePart[@type='date'] and namePart[@type='termsOfAddress'] but mostly uses
-        untyped nameParts (no 'given' or 'family').  We pluck out the untyped namePart for the RDF. -->
+
+        <!-- The MJP data occasionally uses namePart[@type='date'] and
+             namePart[@type='termsOfAddress'] but mostly uses untyped
+             nameParts (no 'given' or 'family').  We pluck out the
+             untyped namePart for the RDF. -->
         
-        <!-- MJP data is somewhat dirty. There are <mods:name> elements with <mods:role> subelements but no <mods:namePart> element.
-        We have to check for this.-->
+        <!-- MJP data is somewhat dirty. There are <mods:name>
+             elements with <mods:role> subelements but no
+             <mods:namePart> element.  We have to check for this.-->
         <xsl:if test="mods:namePart[empty(@type)]">
             <xsl:variable name="name">
                 <xsl:apply-templates select="mods:namePart[empty(@type)]" />
@@ -298,6 +301,7 @@ Each requies a different kind of RDF.
                         <xsl:value-of select="$name"/>
                     </role:TRL>
                 </xsl:when>
+		
             </xsl:choose>
         </xsl:if>
         </xsl:if>
@@ -317,7 +321,7 @@ Each requies a different kind of RDF.
         />
     </xsl:function>
 
-
+    
 
     <!-- Template for processing issue constituents.  There's a good
          deal of overlap with the mods:mods template, so some code
@@ -336,8 +340,16 @@ Each requies a different kind of RDF.
         </collex:archive>
 
         <!-- A SINGLE <dc:title> element is REQUIRED. -->
+
         <dc:title>
-            <xsl:apply-templates select="mods:titleInfo[1]"/>
+	  <xsl:choose>
+	    <xsl:when test="mods:titleInfo[1]">
+              <xsl:apply-templates select="mods:titleInfo[1]"/>	      
+	    </xsl:when>
+	    <xsl:otherwise>
+	      <xsl:text>[untitled]</xsl:text>
+	    </xsl:otherwise>
+	  </xsl:choose>
         </dc:title>
 
         <!-- One or more <dc:type> elements are REQUIRED. -->
