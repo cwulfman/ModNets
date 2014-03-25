@@ -214,7 +214,7 @@ Each requies a different kind of RDF.
     </xsl:template>
 
 
-    <xsl:template match="mods:genre[@authority='aat']">
+    <xsl:template match="mods:genre[@authority='aat' or @authority='marcgt']">
         <!-- <dc:type> is poorly implemented in Collex.
             For purposes of ingestion into Collex, we identify
             magazine issues as Collections and the contents of
@@ -225,6 +225,12 @@ Each requies a different kind of RDF.
             </xsl:when>
             <xsl:otherwise>Periodical</xsl:otherwise>
         </xsl:choose>
+    </xsl:template>
+
+    <!-- We need a default for the genre of *all* constituent content;
+    the only reasonable value is Periodical. -->
+    <xsl:template match="mods:genre">
+      <xs:text>Periodical</xs:text>
     </xsl:template>
 
     <xsl:template match="mods:genre" mode="collex-genre">
