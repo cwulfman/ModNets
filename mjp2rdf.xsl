@@ -229,7 +229,7 @@ Each requies a different kind of RDF.
     <!-- We need a default for the genre of *all* constituent content;
     the only reasonable value is Periodical. -->
     <xsl:template match="mods:genre">
-      <xs:text>Periodical</xs:text>
+      <xsl:text>Periodical</xsl:text>
     </xsl:template>
 
     <xsl:template match="mods:genre" mode="collex-genre">
