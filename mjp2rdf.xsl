@@ -75,7 +75,8 @@ Each requies a different kind of RDF.
     Periodical Issues (text.periodicals.issue)
 -->
 
-    <xsl:template match="mets:mets[@TYPE='text.periodicals.issue']">
+   <xsl:template match="mets:mets[@TYPE='text.periodicals.issue']"> 
+
         <!-- An element with an rdf:about element is REQUIRED.  
             The spec says it should be an arbitrary element in the
             project's namespace.  -->
@@ -99,7 +100,8 @@ Each requies a different kind of RDF.
                 </xsl:apply-templates>
             </mjp:Description>
         </xsl:for-each>
-    </xsl:template>
+   </xsl:template>
+    
 
     <xsl:template match="mods:mods">
         <xsl:param name="objid"/>
@@ -301,6 +303,16 @@ Each requies a different kind of RDF.
                         <xsl:value-of select="$name"/>
                     </role:TRL>
                 </xsl:when>
+                <xsl:when test="$roleTerm='art'">
+                    <role:ART>
+                        <xsl:value-of select="$name"/>
+                    </role:ART>
+                </xsl:when>
+                <xsl:otherwise> <!-- Default to "contributor" -->
+                    <role:CTB>
+                        <xsl:value-of select="$name"/>
+                    </role:CTB>
+                </xsl:otherwise>
 		
             </xsl:choose>
         </xsl:if>
