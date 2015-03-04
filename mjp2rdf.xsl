@@ -29,6 +29,8 @@
 
     <!-- Collex REQUIRES "a shorthand reference to the contributing project or journal."  -->
     <xsl:variable name="project-id" as="xs:string">mjp</xsl:variable>
+    <!-- Update (1/25/2015): We're now supplying a journal-specific collex:archive value (see below) -->
+
 
     <!-- Collex REQUIRES one or more federation ids. An authorized string for ModNets would be nice
     but this will do for now. -->
@@ -113,7 +115,8 @@ Each requies a different kind of RDF.
 
         <!-- A SINGLE <collex:archive> element is REQUIRED. -->
         <collex:archive>
-            <xsl:value-of select="$project-id"/>
+          <!-- <xsl:value-of select="$project-id"/> -->
+	  <xsl:value-of select="mjp:archive-id(mods:identifier[@type='local'])" />
         </collex:archive>
 
         <!-- A SINGLE <dc:title> element is REQUIRED. -->
@@ -332,6 +335,11 @@ Each requies a different kind of RDF.
         <xsl:value-of select="concat('http://dl.lib.brown.edu/mjp/teifiles/', $modsid, '.tei.xml')"
         />
     </xsl:function>
+    
+    <xsl:function name="mjp:archive-id">
+        <xsl:param name="mjpid" as="xs:string" />
+        <xsl:value-of select="concat('mjp_', substring-before($mjpid, ':'))" />
+    </xsl:function>
 
     
 
@@ -348,7 +356,8 @@ Each requies a different kind of RDF.
 
         <!-- A SINGLE <collex:archive> element is REQUIRED. -->
         <collex:archive>
-            <xsl:value-of select="$project-id"/>
+          <!-- <xsl:value-of select="$project-id"/> -->
+	  <xsl:value-of select="mjp:archive-id(ancestor::mods:mods/mods:identifier[@type='local'])" />
         </collex:archive>
 
         <!-- A SINGLE <dc:title> element is REQUIRED. -->
