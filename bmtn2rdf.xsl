@@ -9,17 +9,23 @@ REFERENCES: http://wiki.collex.org/index.php/Submitting_RDF
 
 <!-- This stylesheet uses the &quot;pull&quot; method of XSL processing,
 because the purpose is to create a conformant Collex document, not to
-account for all elements in the MJP MODS record. -->
+account for all elements in the bmtn MODS record. -->
 
 
-<xsl:stylesheet version="2.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
-  xmlns:mjp="http://modjourn.org/schema#" xmlns:bmtn="http://bluemountain.princeton.edu"
-  xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:mets="http://www.loc.gov/METS/"
-  xmlns:mods="http://www.loc.gov/mods/v3" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-  xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#" xmlns:dc="http://purl.org/dc/elements/1.1/"
-  xmlns:dcterms="http://purl.org/dc/terms/" xmlns:collex="http://www.collex.org/schema#"
-  xmlns:role="http://www.loc.gov/loc.terms/relators/" xmlns:xs="http://www.w3.org/2001/XMLSchema"
-  exclude-result-prefixes="xs mods">
+<xsl:stylesheet version="2.0"
+		xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+		xmlns:bmtn="http://bluemountain.princeton.edu"
+		xmlns:xlink="http://www.w3.org/1999/xlink"
+		xmlns:mets="http://www.loc.gov/METS/"
+		xmlns:mods="http://www.loc.gov/mods/v3"
+		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+		xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+		xmlns:dc="http://purl.org/dc/elements/1.1/"
+		xmlns:dcterms="http://purl.org/dc/terms/"
+		xmlns:collex="http://www.collex.org/schema#"
+		xmlns:role="http://www.loc.gov/loc.terms/relators/"
+		xmlns:xs="http://www.w3.org/2001/XMLSchema"
+		exclude-result-prefixes="xs mods">
 
   <xsl:output indent="yes"/>
 
@@ -36,7 +42,7 @@ account for all elements in the MJP MODS record. -->
   <xsl:variable name="federation-id" as="xs:string">ModNets</xsl:variable>
 
   <!-- Collex REQUIRES one or more disciplines.  These are not terribly well defined; for
-       now, Literature seems to be the only one universally applicable to MJP materials. -->
+       now, Literature seems to be the only one universally applicable to Blue Mountain materials. -->
   <xsl:variable name="disciplines">
     <disciplines>
       <discipline>Literature</discipline>
@@ -65,24 +71,21 @@ account for all elements in the MJP MODS record. -->
          The spec says it should be an arbitrary element in the
          project's namespace.  -->
     <xsl:variable name="objid" select="@OBJID"/>
-    <mjp:Description rdf:about="$objid">
+    <bmtn:Description rdf:about="$objid">
       <xsl:apply-templates select="//mods:mods">
         <xsl:with-param name="objid" select="$objid"/>
       </xsl:apply-templates>
-    </mjp:Description>
+    </bmtn:Description>
 
     <!-- Generate an RDF object for each issue constituent.	-->
 
     <xsl:for-each select="//mods:mods/mods:relatedItem[@type='constituent']">
-      <!-- The MJP does not assign IDs to relatedItems (it should)
-	   so we must construct a unique id for the relatedItem
-	   from its position in the sequence of relatedItems. -->
-      <mjp:Description rdf:about="{$objid}#{@ID}">
+      <bmtn:Description rdf:about="{$objid}#{@ID}">
         <dcterms:isPartOf rdf:resource="{$objid}"/>
         <xsl:apply-templates select=".">
           <xsl:with-param name="objid" select="$objid"/>
         </xsl:apply-templates>
-      </mjp:Description>
+      </bmtn:Description>
     </xsl:for-each>
   </xsl:template>
 
@@ -141,24 +144,24 @@ account for all elements in the MJP MODS record. -->
     </dc:date>
 
     <!-- ONE <rdfs:seeAlso> element with the URL of the resource is REQUIRED. 
-	 We write a function, mjp:object-URL(), that returns this URL. -->
+	 We write a function, bmtn:object-URL(), that returns this URL. -->
     <rdfs:seeAlso>
-      <xsl:attribute name="rdf:resource" select="bmtn:object-URL($objid)"/>
+      <xsl:attribute name="rdf:resource" select="bmtn:object-URL(mods:identifier[@type='bmtn'])"/>
     </rdfs:seeAlso>
 
     <!-- END OF REQUIRED ELEMENTS -->
 
-    <!-- Generate a <collex:source_xml> element that points to the TEI file
-         associated with this object.  Unfortunately, that file is not represented in the 
-         fileSec of the METS.  Fortunately, there is a naming convention: the
-         TEI derivative is named MJPID.tei.xml, where MJPID is the ID of the MODS record,
-	 so we write a function, mjp:tei-URL() that returns a URL. -->
-
-    <!--
-    <collex:source_xml>
-      <xsl:value-of select="mjp:tei-URL(@ID)"/>
-    </collex:source_xml>
+    <!-- Generate a <collex:source_xml> element that points to the TEI
+         file associated with this object. Blue Mountain will (soon)
+         have a uri for this; meanwhile, bmtn:tei-URL(modsid) is a
+         stub function.
     -->
+
+
+    <collex:source_xml>
+      <xsl:value-of select="bmtn:tei-URL(@ID)"/>
+    </collex:source_xml>
+
 
     <!-- MODS constituents are represented as explicit resources (objects).
          In the parent (issue) object, their relationship with the parent object
@@ -297,9 +300,9 @@ account for all elements in the MJP MODS record. -->
     <xsl:value-of select="concat('http://bluemountain.princeton.edu/issue.html?issueURN=',$objid)"/>
   </xsl:function>
 
-  <xsl:function name="mjp:tei-URL">
+  <xsl:function name="bmtn:tei-URL">
     <xsl:param name="modsid" as="xs:string"/>
-    <xsl:value-of select="concat('http://dl.lib.brown.edu/mjp/teifiles/', $modsid, '.tei.xml')"/>
+    <!-- later -->
   </xsl:function>
 
 
@@ -341,10 +344,6 @@ account for all elements in the MJP MODS record. -->
       <xsl:apply-templates select="mods:genre"/>
     </dc:type>
 
-    <!-- One or more <role:*> elements are REQUIRED. The MJP does not
-         presently record roles (like editor) for top-level titles, volumes, or issues.
-         ARC advises to encode <role:AUT>Unknown</role:AUT> to indicate that the
-    -->
     <xsl:choose>
       <xsl:when test="mods:name and not(empty(mods:name/text()))">
         <xsl:apply-templates select="mods:name"/>
@@ -372,7 +371,7 @@ account for all elements in the MJP MODS record. -->
 
     <!-- ONE <rdfs:seeAlso> element with the URL of the resource is REQUIRED. -->
     <rdfs:seeAlso>
-      <xsl:attribute name="rdf:resource" select="bmtn:object-URL($objid)"/>
+      <xsl:attribute name="rdf:resource" select="bmtn:object-URL(ancestor::mods:mods/mods:identifier[@type='bmtn'])"/>
     </rdfs:seeAlso>
   </xsl:template>
 
