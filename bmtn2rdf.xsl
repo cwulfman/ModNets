@@ -101,7 +101,8 @@ account for all elements in the bmtn MODS record. -->
     <!-- A SINGLE <collex:archive> element is REQUIRED. -->
     <collex:archive>
       <!-- <xsl:value-of select="$project-id"/> -->
-      <xsl:value-of select="xs:string(./mods:relatedItem[@type='host']/@xlink:href)"/>
+      <xsl:value-of select="bmtn:archive-name(./mods:relatedItem[@type='host']/@xlink:href)"></xsl:value-of>
+      <!-- <xsl:value-of select="xs:string(./mods:relatedItem[@type='host']/@xlink:href)"/> -->
     </collex:archive>
 
     <!-- A SINGLE <dc:title> element is REQUIRED. -->
@@ -211,7 +212,7 @@ account for all elements in the bmtn MODS record. -->
     <!-- <dc:type> is poorly implemented in Collex.
          For purposes of ingestion into Collex, we identify
          magazine issues as Collections and the contents of
-	 issues as Periodical. -->
+	       issues as Periodical. -->
     <xsl:choose>
       <xsl:when test="./text() = 'periodicals'">
         <xsl:text>Collection</xsl:text>
@@ -305,6 +306,11 @@ account for all elements in the bmtn MODS record. -->
     <!-- later -->
   </xsl:function>
 
+  <xsl:function name="bmtn:archive-name">
+    <xsl:param name="objid" as="xs:string"/>
+    <xsl:value-of select="concat($project-id,'_',tokenize($objid, ':')[last()])"></xsl:value-of>
+  </xsl:function>
+
 
 
   <!-- Template for processing issue constituents.  There's a good
@@ -321,8 +327,7 @@ account for all elements in the bmtn MODS record. -->
     <!-- A SINGLE <collex:archive> element is REQUIRED. -->
     
     <collex:archive>
-      <!-- <xsl:value-of select="$project-id"/> -->
-      <xsl:value-of select="xs:string(ancestor::mods:mods/mods:relatedItem[@type='host']/@xlink:href)"/>
+      <xsl:value-of select="bmtn:archive-name(ancestor::mods:mods/mods:relatedItem[@type='host']/@xlink:href)" />
     </collex:archive>
     
 
