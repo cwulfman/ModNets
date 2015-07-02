@@ -71,7 +71,7 @@ account for all elements in the bmtn MODS record. -->
          The spec says it should be an arbitrary element in the
          project's namespace.  -->
     <xsl:variable name="objid" select="@OBJID"/>
-    <bmtn:Description rdf:about="$objid">
+    <bmtn:Description rdf:about="{$objid}">
       <xsl:apply-templates select="//mods:mods">
         <xsl:with-param name="objid" select="$objid"/>
       </xsl:apply-templates>
